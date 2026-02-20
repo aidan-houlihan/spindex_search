@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entomological collection · match source indicator</title>
+    <title>Entomological collection · show matched field + value</title>
     <style>
         * {
             box-sizing: border-box;
@@ -205,7 +205,7 @@
         /* card grid layout */
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
             gap: 20px;
             padding: 6px 0 20px 0;
         }
@@ -224,20 +224,33 @@
             border-color: #aec2a2;
             box-shadow: 0 8px 16px rgba(60, 90, 40, 0.1);
         }
-        .match-source {
-            position: absolute;
-            top: -8px;
-            right: 16px;
-            background: #ca9e6d;
-            color: white;
-            font-size: 0.7rem;
-            font-weight: 600;
-            padding: 4px 12px;
-            border-radius: 30px;
-            letter-spacing: 0.3px;
+        .match-banner {
+            background: #ffe8d4;
+            border-left: 5px solid #b5753a;
+            border-radius: 12px;
+            padding: 8px 14px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #4d3a28;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 6px rgba(190, 130, 50, 0.1);
+        }
+        .match-label {
+            font-weight: 700;
             text-transform: uppercase;
-            box-shadow: 0 2px 6px rgba(160, 110, 50, 0.3);
-            z-index: 2;
+            color: #975a24;
+            letter-spacing: 0.3px;
+            font-size: 0.75rem;
+        }
+        .match-value {
+            font-weight: 500;
+            word-break: break-word;
+            background: #fff1e3;
+            padding: 2px 12px;
+            border-radius: 30px;
         }
         .card-header {
             display: flex;
@@ -374,7 +387,7 @@
 <body>
 <div class="app-container">
     <h1>
-        Entomological collection · match indicator
+        Entomological collection · match field & value
         <span>static index · 100k+ rows</span>
     </h1>
 
@@ -447,7 +460,7 @@
         <div class="no-results">waiting for index ...</div>
     </div>
 
-    <footer>field match badge shows why result appeared (if restricted to non‑core field)</footer>
+    <footer>match banner shows exactly which field & value triggered the result</footer>
 </div>
 
 <script>
@@ -465,7 +478,7 @@
     let rowStore = [];
     let totalSpecimenSum = 0;
     let indexed = false;
-    let lastSearchResults = [];
+    let lastSearchResults = [];        // array of { row, matchField, matchValue } objects
     let lastTerm = '';
     let lastField = 'scientificName';
     let currentSortField = 'relevance';
@@ -545,12 +558,12 @@
         }
     }
 
-    // search logic: returns array of { row, matchField } objects (so we know why matched)
+    // search logic: returns array of { row, matchField, matchValue }
     function searchRowsWithMatchInfo(term, field) {
         if (!indexed) return [];
         if (term === '') {
-            // empty search: no match info, just rows
-            return rowStore.slice(0, 200).map(row => ({ row, matchField: null }));
+            // empty search: no match info
+            return rowStore.slice(0, 200).map(row => ({ row, matchField: null, matchValue: null }));
         }
 
         let regex;
@@ -565,27 +578,29 @@
 
         for (let row of rowStore) {
             let matchedBecause = null;
+            let matchedValue = null;
             for (let f of fieldsToSearch) {
                 const value = row[f] || '';
                 if (regex.test(value)) {
                     matchedBecause = f;
+                    matchedValue = value;
                     break;
                 }
             }
             if (matchedBecause) {
-                results.push({ row, matchField: matchedBecause });
+                results.push({ row, matchField: matchedBecause, matchValue: matchedValue });
             }
         }
         return results;
     }
 
-    // for compatibility with existing sort (which expects array of rows), we adapt
+    // for download (plain rows)
     function searchRowsLegacy(term, field) {
         return searchRowsWithMatchInfo(term, field).map(item => item.row);
     }
 
     // sorting function (works on array of row objects)
-    function sortResults(rows, sortBy, descending) {
+    function sortRows(rows, sortBy, descending) {
         if (!rows.length) return rows;
         const sorted = [...rows];
 
@@ -614,7 +629,7 @@
         return sorted;
     }
 
-    // render cards from array of { row, matchField } (matchField may be null)
+    // render cards from array of { row, matchField, matchValue }
     function renderCardsWithMatchInfo(items) {
         if (!items.length) {
             cardContainer.innerHTML = `<div class="no-results">no matching entries</div>`;
@@ -626,7 +641,7 @@
         const maxRender = Math.min(items.length, 2000);
 
         for (let i = 0; i < maxRender; i++) {
-            const { row, matchField } = items[i];
+            const { row, matchField, matchValue } = items[i];
 
             const scientific = row.scientificName || '(no scientific name)';
             const prep = row.preparation || '—';
@@ -635,25 +650,21 @@
             const drawer = row.drawerNumber || '';
             const locationDisplay = (location ? location : '') + (drawer ? (location ? ' · ' : '') + 'drawer ' + drawer : (drawer ? 'drawer ' + drawer : '—'));
 
-            // Determine if we need to show a match badge: when field is restricted to a non-core field
-            // and matchField is not one of the core displayed fields, we show it.
-            let showBadge = false;
-            let badgeField = '';
-            if (lastField !== 'any' && lastField !== '' && matchField && !CORE_FIELDS.has(matchField)) {
-                showBadge = true;
-                badgeField = matchField;
-            } else if (lastField === 'any' && matchField && !CORE_FIELDS.has(matchField)) {
-                // optional: also show if any-field matched a non-core field? we decide to show as well
-                showBadge = true;
-                badgeField = matchField;
-            }
+            // decide if we show match banner: when matchField exists AND (field restricted OR any-field matched a non-core)
+            const showMatch = matchField && matchValue !== null && (lastField !== 'any' || !CORE_FIELDS.has(matchField));
 
             const extraList = HEADERS.filter(h => !CORE_FIELDS.has(h));
 
             cardsHtml += `<div class="record-card" data-row-idx="${i}">`;
-            if (showBadge) {
-                cardsHtml += `<div class="match-source">match: ${badgeField}</div>`;
+
+            // Match banner with field and value
+            if (showMatch) {
+                cardsHtml += `<div class="match-banner">`;
+                cardsHtml += `<span class="match-label">matched via ${matchField}:</span>`;
+                cardsHtml += `<span class="match-value">${escapeHtml(matchValue.substring(0, 100))}${matchValue.length > 100 ? '…' : ''}</span>`;
+                cardsHtml += `</div>`;
             }
+
             cardsHtml += `<div class="card-header">`;
             cardsHtml += `<span class="scientific-name">${escapeHtml(scientific)}</span>`;
             cardsHtml += `<span class="specimen-count-badge">${escapeHtml(count)}</span>`;
@@ -709,15 +720,17 @@
         }
         // get results with match info
         let items = searchRowsWithMatchInfo(term, field);
-        lastSearchResults = items.map(item => item.row); // store plain rows for sorting reference
+        lastSearchResults = items; // store full items
         lastTerm = term;
         lastField = field;
 
-        // sort the rows (ignore match info for sorting)
-        const sortedRows = sortResults(lastSearchResults, currentSortField, currentSortDesc);
-        // rebuild items in sorted order, preserving matchField from original items (by row reference)
-        const rowToMatch = new Map(items.map(item => [item.row, item.matchField]));
-        const sortedItems = sortedRows.map(row => ({ row, matchField: rowToMatch.get(row) || null }));
+        // extract plain rows for sorting
+        const plainRows = items.map(item => item.row);
+        const sortedRows = sortRows(plainRows, currentSortField, currentSortDesc);
+
+        // rebuild items in sorted order, preserving match info
+        const rowToItem = new Map(items.map(item => [item.row, item]));
+        const sortedItems = sortedRows.map(row => rowToItem.get(row));
 
         renderCardsWithMatchInfo(sortedItems);
     }
@@ -726,17 +739,15 @@
         if (!indexed) return;
         let items;
         if (lastTerm === '' && lastField === 'scientificName') {
-            // preview case: search again to get match info
             items = searchRowsWithMatchInfo('', 'scientificName');
-            lastSearchResults = items.map(i => i.row);
         } else {
-            // rebuild from last search using stored term/field
             items = searchRowsWithMatchInfo(lastTerm, lastField);
-            lastSearchResults = items.map(i => i.row);
         }
-        const sortedRows = sortResults(lastSearchResults, currentSortField, currentSortDesc);
-        const rowToMatch = new Map(items.map(item => [item.row, item.matchField]));
-        const sortedItems = sortedRows.map(row => ({ row, matchField: rowToMatch.get(row) || null }));
+        lastSearchResults = items;
+        const plainRows = items.map(item => item.row);
+        const sortedRows = sortRows(plainRows, currentSortField, currentSortDesc);
+        const rowToItem = new Map(items.map(item => [item.row, item]));
+        const sortedItems = sortedRows.map(row => rowToItem.get(row));
         renderCardsWithMatchInfo(sortedItems);
     }
 

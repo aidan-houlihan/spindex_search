@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entomological collection · card view + sort</title>
+    <title>Entomological collection · card explorer + named download</title>
     <style>
         * {
             box-sizing: border-box;
@@ -431,7 +431,7 @@
         <div class="no-results">waiting for index ...</div>
     </div>
 
-    <footer>location displayed before drawer · default search in scientificName · relevance + count sort</footer>
+    <footer>location before drawer · default scientificName · download prompts with search term</footer>
 </div>
 
 <script>
@@ -466,7 +466,7 @@
     const sortDescBtn = document.getElementById('sortDescBtn');
     const sortAscBtn = document.getElementById('sortAscBtn');
 
-    // set default field to scientificName (selected in HTML, but sync)
+    // set default field to scientificName
     fieldSelect.value = 'scientificName';
 
     // load & parse CSV
@@ -519,7 +519,6 @@
             loadStatus.innerText = `index ready: ${rowStore.length} rows`;
             totalSpecimensSpan.innerText = `specimens: ${totalSpecimenSum.toLocaleString()}`;
 
-            // initial preview (first 200) with default search? run empty search on scientificName? but empty term returns preview anyway.
             performSearchAndRender('', 'scientificName');
         } catch (err) {
             console.error(err);
@@ -529,7 +528,7 @@
         }
     }
 
-    // search logic (returns array)
+    // search logic
     function searchRows(term, field) {
         if (!indexed) return [];
         if (term === '') {
@@ -565,11 +564,10 @@
         const sorted = [...results];
 
         if (sortBy === 'relevance') {
-            // default: best match (we use specimenCount descending as proxy for "best")
             sorted.sort((a, b) => {
                 const countA = parseInt(a.specimenCount, 10) || 0;
                 const countB = parseInt(b.specimenCount, 10) || 0;
-                return countB - countA; // always desc for relevance
+                return countB - countA;
             });
         } else {
             sorted.sort((a, b) => {
@@ -590,7 +588,7 @@
         return sorted;
     }
 
-    // render cards from results array
+    // render cards
     function renderCards(rows) {
         if (!rows.length) {
             cardContainer.innerHTML = `<div class="no-results">no matching entries</div>`;
@@ -609,7 +607,6 @@
             const count = r.specimenCount || '0';
             const location = r.location || '';
             const drawer = r.drawerNumber || '';
-            // location displayed BEFORE drawerNumber (per request)
             const locationDisplay = (location ? location : '') + (drawer ? (location ? ' · ' : '') + 'drawer ' + drawer : (drawer ? 'drawer ' + drawer : '—'));
 
             const mainFields = new Set(['scientificName','preparation','specimenCount','location','drawerNumber']);
@@ -670,22 +667,18 @@
             return;
         }
         let results = searchRows(term, field);
-        // store for sorting updates
         lastSearchResults = results;
         lastTerm = term;
         lastField = field;
 
-        // apply current sort
         const sorted = sortResults(results, currentSortField, currentSortDesc);
         renderCards(sorted);
     }
 
-    // refresh display using last search but with new sort
     function refreshWithCurrentSort() {
         if (!indexed) return;
         let results = lastSearchResults;
         if (lastTerm === '' && lastField === 'scientificName') {
-            // if empty, we might have preview 200; keep as is
             results = lastSearchResults.length ? lastSearchResults : rowStore.slice(0,200);
         }
         const sorted = sortResults(results, currentSortField, currentSortDesc);
@@ -709,12 +702,9 @@
         }
     });
 
-    // Sort field change
     sortFieldSelect.addEventListener('change', (e) => {
         currentSortField = e.target.value;
-        // for relevance, force desc and disable buttons? but we keep as is.
         if (currentSortField === 'relevance') {
-            // relevance always desc, but we let visual reflect.
             currentSortDesc = true;
             sortDescBtn.classList.add('active-sort');
             sortAscBtn.classList.remove('active-sort');
@@ -723,10 +713,7 @@
     });
 
     sortDescBtn.addEventListener('click', () => {
-        if (currentSortField === 'relevance') {
-            // keep desc, no change
-            return;
-        }
+        if (currentSortField === 'relevance') return;
         currentSortDesc = true;
         sortDescBtn.classList.add('active-sort');
         sortAscBtn.classList.remove('active-sort');
@@ -734,26 +721,47 @@
     });
 
     sortAscBtn.addEventListener('click', () => {
-        if (currentSortField === 'relevance') {
-            // cannot change relevance order, but we toggle anyway? we prevent
-            return;
-        }
+        if (currentSortField === 'relevance') return;
         currentSortDesc = false;
         sortAscBtn.classList.add('active-sort');
         sortDescBtn.classList.remove('active-sort');
         refreshWithCurrentSort();
     });
 
+    // DOWNLOAD with custom prompt + search term in default name
     downloadBtn.addEventListener('click', () => {
         if (!indexed) return alert('index not ready');
+
         const term = searchInput.value.trim();
         const field = fieldSelect.value;
-        let results = (term === '' && field === 'scientificName') ? rowStore : searchRows(term, field);
+        // If empty term & field=scientificName, return whole collection? we'll use all rows.
+        let results;
+        if (term === '' && field === 'scientificName') {
+            results = rowStore;  // whole collection for empty search
+        } else {
+            results = searchRows(term, field);
+        }
+
         if (results.length === 0) {
             alert('no records to download');
             return;
         }
 
+        // Build default filename: collection_YYYY-MM-DD_searchTerm.csv
+        const dateStr = new Date().toISOString().slice(0,10);
+        let safeTerm = term.trim() || 'all';
+        // replace characters not safe for filenames
+        safeTerm = safeTerm.replace(/[^a-z0-9_\- ]/gi, '_').substring(0, 50);
+        const defaultName = `collection_${dateStr}_${safeTerm}.csv`;
+
+        // Prompt user
+        let fileName = prompt('Enter filename for CSV download:', defaultName);
+        if (!fileName) return; // user cancelled
+
+        // ensure .csv extension
+        if (!fileName.toLowerCase().endsWith('.csv')) fileName += '.csv';
+
+        // Generate CSV
         const csvRows = [];
         csvRows.push(HEADERS.join(','));
         results.forEach(row => {
@@ -772,7 +780,7 @@
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.href = url;
-        link.setAttribute('download', `collection_search_${new Date().toISOString().slice(0,10)}.csv`);
+        link.setAttribute('download', fileName);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -786,7 +794,6 @@
         }
     });
 
-    // start loading
     loadAndIndexCsv();
 })();
 </script>

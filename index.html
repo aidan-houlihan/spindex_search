@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entomological Collection Database - Static Version</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #27ae60;
+            padding-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .status-section {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #f39c12;
+            display: inline-block;
+        }
+
+        .status-indicator.loaded {
+            background-color: #27ae60;
+        }
+
+        .status-indicator.error {
+            background-color: #e74c3c;
+        }
+
+        .status-text {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .collection-stats {
+            margin-left: auto;
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stat-item {
+            background-color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .search-section {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 300px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #27ae60;
+            box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.2);
+        }
+
+        .search-button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .search-button:hover {
+            background-color: #2ecc71;
+        }
+
+        .search-button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .advanced-search {
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .advanced-search h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .advanced-search h3:hover {
+            color: #27ae60;
+        }
+
+        .field-search-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .field-search-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .field-search-item label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 13px;
+            text-transform: capitalize;
+        }
+
+        .field-search-item input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .field-search-item input:focus {
+            outline: none;
+            border-color: #27ae60;
+        }
+
+        .regex-checkbox {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .regex-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .location-note {
+            background-color: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 12px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .location-note strong {
+            color: #2980b9;
+        }
+
+        .results-section {
+            margin-top: 30px;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .results-count {
+            font-size: 18px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .download-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .download-button:hover {
+            background-color: #2980b9;
+        }
+
+        .download-button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #2c3e50;
+            color: white;
+            font-weight: 600;
+            padding: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        .location-highlight {
+            background-color: #e8f4f8 !important;
+            font-weight: 500;
+        }
+
+        .drawer-highlight {
+            background-color: #fff3cd !important;
+            font-weight: 500;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #27ae60;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #e74c3c;
+            padding: 20px;
+            text-align: center;
+            background-color: #fdf3f2;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .quick-filters {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-filter-btn {
+            background-color: #ecf0f1;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #2c3e50;
+        }
+
+        .quick-filter-btn:hover {
+            background-color: #bdc3c7;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .search-row {
+                flex-direction: column;
+            }
+            
+            .search-input {
+                min-width: 100%;
+            }
+            
+            .collection-stats {
+                margin-left: 0;
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Entomological Collection Database</h1>
+        <div class="subtitle">Static collection reference - data loaded from collection.csv</div>
+
+        <!-- Status Section -->
+        <div class="status-section" id="statusSection">
+            <span class="status-indicator" id="statusIndicator"></span>
+            <span class="status-text" id="statusText">Loading collection data...</span>
+            <div class="collection-stats" id="collectionStats">
+                <span class="stat-item" id="totalSpecimens">Specimens: --</span>
+                <span class="stat-item" id="totalSpecies">Species: --</span>
+                <span class="stat-item" id="totalGenera">Genera: --</span>
+            </div>
+        </div>
+
+        <!-- Search Section -->
+        <div class="search-section" id="searchSection" style="display: none;">
+            <div class="search-row">
+                <input type="text" class="search-input" id="globalSearch" placeholder="Search all fields... (supports regex)">
+                <button class="search-button" id="searchButton" onclick="performSearch()">Search</button>
+            </div>
+
+            <div class="location-note">
+                <strong> Location Format:</strong> Specimens are located by both Location and DrawerNumber. Use these fields together to find exact positions.
+            </div>
+
+            <div class="quick-filters">
+                <button class="quick-filter-btn" onclick="quickFilter('all')">All Specimens</button>
+                <button class="quick-filter-btn" onclick="quickFilter('location')">Browse by Location</button>
+                <button class="quick-filter-btn" onclick="quickFilter('drawer')">Browse by Drawer</button>
+            </div>
+
+            <div class="advanced-search">
+                <h3 onclick="toggleAdvancedSearch()">Advanced Search ▼</h3>
+                <div id="advancedSearchContent" style="display: none;">
+                    <div class="field-search-grid" id="fieldSearchGrid">
+                        <!-- Field inputs will be dynamically generated -->
+                    </div>
+                    <div class="regex-checkbox">
+                        <input type="checkbox" id="useRegex" checked>
+                        <label for="useRegex">Enable regex searching (when disabled, performs case-insensitive text search)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-header">
+                <span class="results-count" id="resultsCount">0 results found</span>
+                <button class="download-button" id="downloadButton" onclick="downloadResults()">Download Results (CSV)</button>
+            </div>
+            <div class="table-container">
+                <table id="resultsTable">
+                    <thead id="tableHeader">
+                        <!-- Table header will be dynamically generated -->
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="100%" class="loading">
+                                <div class="loading-spinner"></div>
+                                Loading data...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Collection data is loaded from <code>collection.csv</code> in the same directory. Last updated: <span id="lastUpdated"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CSV_FILE_PATH = 'spindex.csv'; // Change this if your CSV has a different name/path
+        
+        let csvData = [];
+        let headers = [];
+        let isLoading = false;
+
+        // Load PapaParse and then load the CSV
+        (function loadDependencies() {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+            script.onload = function() {
+                Papa = window.Papa;
+                loadCSVFile();
+            };
+            script.onerror = function() {
+                showError('Failed to load PapaParse library. Please check your internet connection.');
+            };
+            document.head.appendChild(script);
+        })();
+
+        function loadCSVFile() {
+            isLoading = true;
+            updateStatus('loading', 'Loading collection data...');
+            
+            // Show results section with loading indicator
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            // Fetch and parse the CSV file
+            fetch(CSV_FILE_PATH)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load ${CSV_FILE_PATH}. Make sure the file exists in the same directory as this HTML file.`);
+                    }
+                    return response.text();
+                })
+                .then(csvText => {
+                    Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            if (results.data && results.data.length > 0) {
+                                csvData = results.data;
+                                headers = results.meta.fields;
+                                
+                                // Update status and UI
+                                updateStatus('loaded', `Loaded ${csvData.length.toLocaleString()} specimens`);
+                                updateCollectionStats();
+                                
+                                // Show search section and display all data
+                                document.getElementById('searchSection').style.display = 'block';
+                                
+                                // Generate field search inputs
+                                generateFieldSearchInputs();
+                                
+                                // Display all data initially
+                                displayResults(csvData);
+                                
+                                // Set last updated date
+                                document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
+                                
+                                isLoading = false;
+                            } else {
+                                throw new Error('CSV file is empty');
+                            }
+                        },
+                        error: function(error) {
+                            throw new Error('Error parsing CSV: ' + error.message);
+                        }
+                    });
+                })
+                .catch(error => {
+                    showError(error.message);
+                    updateStatus('error', 'Error loading data');
+                    isLoading = false;
+                });
+        }
+
+        function updateStatus(status, message) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            indicator.className = 'status-indicator';
+            if (status === 'loaded') {
+                indicator.classList.add('loaded');
+            } else if (status === 'error') {
+                indicator.classList.add('error');
+            }
+            
+            statusText.textContent = message;
+        }
+
+        function updateCollectionStats() {
+            if (!csvData.length) return;
+            
+            // Calculate statistics
+            const totalSpecimens = csvData.reduce((sum, row) => sum + (parseInt(row.specimenCount) || 0), 0);
+            const uniqueSpecies = new Set(csvData.map(row => row.species).filter(Boolean)).size;
+            const uniqueGenera = new Set(csvData.map(row => row.genus).filter(Boolean)).size;
+            
+            document.getElementById('totalSpecimens').textContent = `Specimens: ${totalSpecimens.toLocaleString()}`;
+            document.getElementById('totalSpecies').textContent = `Species: ${uniqueSpecies.toLocaleString()}`;
+            document.getElementById('totalGenera').textContent = `Genera: ${uniqueGenera.toLocaleString()}`;
+        }
+
+        function generateFieldSearchInputs() {
+            const grid = document.getElementById('fieldSearchGrid');
+            grid.innerHTML = '';
+            
+            // Define the order of fields for better UX
+            const fieldOrder = ['family', 'genus', 'species', 'subspecies', 'scientificName', 
+                              'author', 'class', 'order', 'preparation', 'specimenCount',
+                              'location', 'drawerNumber', 'curation', 'comments', 'enteredBy'];
+            
+            // Sort headers according to fieldOrder, putting unknown fields at the end
+            const sortedHeaders = [...headers].sort((a, b) => {
+                const indexA = fieldOrder.indexOf(a);
+                const indexB = fieldOrder.indexOf(b);
+                if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
+                return indexA - indexB;
+            });
+            
+            sortedHeaders.forEach(header => {
+                const div = document.createElement('div');
+                div.className = 'field-search-item';
+                
+                const label = document.createElement('label');
+                label.textContent = header.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                label.htmlFor = `search_${header}`;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `search_${header}`;
+                input.placeholder = `Search ${header}...`;
+                input.onkeyup = function(e) {
+                    if (e.key === 'Enter') performSearch();
+                };
+                
+                // Highlight location and drawer fields
+                if (header === 'location' || header === 'drawerNumber') {
+                    input.style.borderLeft = '3px solid #3498db';
+                }
+                
+                div.appendChild(label);
+                div.appendChild(input);
+                grid.appendChild(div);
+            });
+        }
+
+        function toggleAdvancedSearch() {
+            const content = document.getElementById('advancedSearchContent');
+            const h3 = document.querySelector('.advanced-search h3');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                h3.textContent = 'Advanced Search ▲';
+            } else {
+                content.style.display = 'none';
+                h3.textContent = 'Advanced Search ▼';
+            }
+        }
+
+        function quickFilter(type) {
+            if (!csvData.length) return;
+            
+            document.getElementById('globalSearch').value = '';
+            
+            // Clear all field searches
+            headers.forEach(header => {
+                const input = document.getElementById(`search_${header}`);
+                if (input) input.value = '';
+            });
+            
+            if (type === 'all') {
+                displayResults(csvData);
+            } else if (type === 'location') {
+                // Sort by location to group specimens
+                const sorted = [...csvData].sort((a, b) => 
+                    (a.location || '').localeCompare(b.location || '')
+                );
+                displayResults(sorted);
+            } else if (type === 'drawer') {
+                // Sort by drawer number
+                const sorted = [...csvData].sort((a, b) => 
+                    (a.drawerNumber || '').localeCompare(b.drawerNumber || '', undefined, {numeric: true})
+                );
+                displayResults(sorted);
+            }
+        }
+
+        function performSearch() {
+            if (!csvData.length || isLoading) return;
+            
+            const globalSearchTerm = document.getElementById('globalSearch').value.trim();
+            const useRegex = document.getElementById('useRegex').checked;
+            
+            // Collect field-specific search terms
+            const fieldSearches = {};
+            headers.forEach(header => {
+                const input = document.getElementById(`search_${header}`);
+                if (input && input.value.trim()) {
+                    fieldSearches[header] = input.value.trim();
+                }
+            });
+
+            // Filter data
+            const results = csvData.filter(row => {
+                // Check field-specific searches first (AND condition)
+                for (const [field, term] of Object.entries(fieldSearches)) {
+                    const value = row[field] || '';
+                    if (!matchesSearch(value, term, useRegex)) {
+                        return false;
+                    }
+                }
+                
+                // If global search exists, check all fields (OR condition within global search)
+                if (globalSearchTerm) {
+                    let globalMatch = false;
+                    for (const header of headers) {
+                        const value = row[header] || '';
+                        if (matchesSearch(value, globalSearchTerm, useRegex)) {
+                            globalMatch = true;
+                            break;
+                        }
+                    }
+                    return globalMatch;
+                }
+                
+                return true;
+            });
+
+            displayResults(results);
+        }
+
+        function matchesSearch(value, term, useRegex) {
+            if (!value) return false;
+            
+            value = String(value);
+            
+            if (useRegex) {
+                try {
+                    const regex = new RegExp(term, 'i');
+                    return regex.test(value);
+                } catch (e) {
+                    // Invalid regex, treat as plain text
+                    return value.toLowerCase().includes(term.toLowerCase());
+                }
+            } else {
+                return value.toLowerCase().includes(term.toLowerCase());
+            }
+        }
+
+        function displayResults(results) {
+            const tbody = document.getElementById('tableBody');
+            const thead = document.getElementById('tableHeader');
+            const resultsCount = document.getElementById('resultsCount');
+            
+            // Update count
+            resultsCount.textContent = `${results.length.toLocaleString()} result${results.length !== 1 ? 's' : ''} found`;
+            
+            // Generate header
+            thead.innerHTML = '';
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                
+                // Add visual indicator for location fields
+                if (header === 'location') {
+                    th.innerHTML = '📍 Location';
+                } else if (header === 'drawerNumber') {
+                    th.innerHTML = '📦 Drawer #';
+                } else {
+                    th.textContent = header.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                }
+                
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            
+            // Generate body
+            tbody.innerHTML = '';
+            
+            if (results.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = headers.length;
+                td.className = 'no-results';
+                td.textContent = 'No specimens found matching your search criteria';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                return;
+            }
+            
+            results.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    let value = row[header] || '';
+                    
+                    // Format specimen count as number
+                    if (header === 'specimenCount' && value) {
+                        value = parseInt(value).toLocaleString();
+                    }
+                    
+                    td.textContent = value;
+                    
+                    // Highlight location and drawer fields for better visibility
+                    if (header === 'location') {
+                        td.classList.add('location-highlight');
+                    } else if (header === 'drawerNumber') {
+                        td.classList.add('drawer-highlight');
+                    }
+                    
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function downloadResults() {
+            if (!csvData.length || isLoading) return;
+            
+            const results = [];
+            const rows = document.getElementById('resultsTable').tBodies[0].rows;
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                if (row.cells.length === headers.length && !row.cells[0].classList.contains('no-results')) {
+                    const rowData = {};
+                    for (let j = 0; j < headers.length; j++) {
+                        let value = row.cells[j].textContent;
+                        // Remove commas from formatted numbers for CSV
+                        if (headers[j] === 'specimenCount') {
+                            value = value.replace(/,/g, '');
+                        }
+                        rowData[headers[j]] = value;
+                    }
+                    results.push(rowData);
+                }
+            }
+            
+            if (results.length === 0) return;
+            
+            // Convert to CSV
+            const csv = Papa.unparse(results);
+            
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `collection_search_results_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function showError(message) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = '100';
+            td.className = 'error';
+            td.innerHTML = `
+                <strong>Error loading collection data:</strong><br>
+                ${message}<br><br>
+                Please ensure that:<br>
+                1. The file <code>collection.csv</code> exists in the same directory as this HTML file<br>
+                2. The CSV file is properly formatted with the correct headers<br>
+                3. You are accessing this page through a web server (GitHub Pages, local server, etc.)
+            `;
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            
+            document.getElementById('resultsSection').style.display = 'block';
+        }
+
+        // Handle keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + F to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('globalSearch').focus();
+            }
+            
+            // Ctrl/Cmd + Enter to perform search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                performSearch();
+            }
+        });
+    </script>
+</body>
+</html>

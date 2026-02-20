@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entomological collection · show matched field + value</title>
+    <title>Entomological collection · conditional match banner</title>
     <style>
         * {
             box-sizing: border-box;
@@ -387,7 +387,7 @@
 <body>
 <div class="app-container">
     <h1>
-        Entomological collection · match field & value
+        Entomological collection · conditional match
         <span>static index · 100k+ rows</span>
     </h1>
 
@@ -460,7 +460,7 @@
         <div class="no-results">waiting for index ...</div>
     </div>
 
-    <footer>match banner shows exactly which field & value triggered the result</footer>
+    <footer>match banner only appears for searches outside: scientificName, genus, species, preparation, specimenCount, location</footer>
 </div>
 
 <script>
@@ -472,8 +472,12 @@
         "preparation","drawerNumber"
     ];
 
-    // core fields always shown on card (the ones we display in main panel)
-    const CORE_FIELDS = new Set(['scientificName', 'preparation', 'specimenCount', 'location', 'drawerNumber']);
+    // Core fields that NEVER trigger the match banner, even if searched directly.
+    // These are always visible on the card (scientificName, preparation, specimenCount, location, drawerNumber)
+    // plus genus, species as requested.
+    const CORE_FIELDS = new Set([
+        'scientificName', 'genus', 'species', 'preparation', 'specimenCount', 'location'
+    ]);
 
     let rowStore = [];
     let totalSpecimenSum = 0;
@@ -650,14 +654,15 @@
             const drawer = row.drawerNumber || '';
             const locationDisplay = (location ? location : '') + (drawer ? (location ? ' · ' : '') + 'drawer ' + drawer : (drawer ? 'drawer ' + drawer : '—'));
 
-            // decide if we show match banner: when matchField exists AND (field restricted OR any-field matched a non-core)
-            const showMatch = matchField && matchValue !== null && (lastField !== 'any' || !CORE_FIELDS.has(matchField));
+            // Determine if we show match banner:
+            // Show only if field restriction is NOT 'any' AND the matched field is NOT in CORE_FIELDS.
+            const showMatch = (lastField !== 'any') && matchField && !CORE_FIELDS.has(matchField);
 
-            const extraList = HEADERS.filter(h => !CORE_FIELDS.has(h));
+            const extraList = HEADERS.filter(h => !CORE_FIELDS.has(h) && h !== 'drawerNumber' && h !== 'specimenCount' && h !== 'preparation' && h !== 'location' && h !== 'scientificName' && h !== 'genus' && h !== 'species');
 
             cardsHtml += `<div class="record-card" data-row-idx="${i}">`;
 
-            // Match banner with field and value
+            // Match banner with field and value (only when restricted to non‑core)
             if (showMatch) {
                 cardsHtml += `<div class="match-banner">`;
                 cardsHtml += `<span class="match-label">matched via ${matchField}:</span>`;

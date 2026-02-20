@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entomological collection · card explorer + named download</title>
+    <title>Entomological collection · match source indicator</title>
     <style>
         * {
             box-sizing: border-box;
@@ -218,10 +218,26 @@
             transition: 0.1s ease;
             display: flex;
             flex-direction: column;
+            position: relative;
         }
         .record-card:hover {
             border-color: #aec2a2;
             box-shadow: 0 8px 16px rgba(60, 90, 40, 0.1);
+        }
+        .match-source {
+            position: absolute;
+            top: -8px;
+            right: 16px;
+            background: #ca9e6d;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 30px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            box-shadow: 0 2px 6px rgba(160, 110, 50, 0.3);
+            z-index: 2;
         }
         .card-header {
             display: flex;
@@ -358,7 +374,7 @@
 <body>
 <div class="app-container">
     <h1>
-        Entomological collection · card explorer
+        Entomological collection · match indicator
         <span>static index · 100k+ rows</span>
     </h1>
 
@@ -431,7 +447,7 @@
         <div class="no-results">waiting for index ...</div>
     </div>
 
-    <footer>location before drawer · default scientificName · download prompts with search term</footer>
+    <footer>field match badge shows why result appeared (if restricted to non‑core field)</footer>
 </div>
 
 <script>
@@ -443,14 +459,17 @@
         "preparation","drawerNumber"
     ];
 
-    let rowStore = [];                 // all rows
+    // core fields always shown on card (the ones we display in main panel)
+    const CORE_FIELDS = new Set(['scientificName', 'preparation', 'specimenCount', 'location', 'drawerNumber']);
+
+    let rowStore = [];
     let totalSpecimenSum = 0;
     let indexed = false;
-    let lastSearchResults = [];        // store last results for sorting
+    let lastSearchResults = [];
     let lastTerm = '';
-    let lastField = 'scientificName';  // default search field
+    let lastField = 'scientificName';
     let currentSortField = 'relevance';
-    let currentSortDesc = true;        // descending (best match relies on desc by specimenCount)
+    let currentSortDesc = true;
 
     // DOM elements
     const loadStatus = document.getElementById('loadStatus');
@@ -466,10 +485,8 @@
     const sortDescBtn = document.getElementById('sortDescBtn');
     const sortAscBtn = document.getElementById('sortAscBtn');
 
-    // set default field to scientificName
     fieldSelect.value = 'scientificName';
 
-    // load & parse CSV
     async function loadAndIndexCsv() {
         try {
             loadStatus.innerText = 'downloading CSV ...';
@@ -528,11 +545,12 @@
         }
     }
 
-    // search logic
-    function searchRows(term, field) {
+    // search logic: returns array of { row, matchField } objects (so we know why matched)
+    function searchRowsWithMatchInfo(term, field) {
         if (!indexed) return [];
         if (term === '') {
-            return rowStore.slice(0, 200);   // preview 200
+            // empty search: no match info, just rows
+            return rowStore.slice(0, 200).map(row => ({ row, matchField: null }));
         }
 
         let regex;
@@ -544,24 +562,32 @@
 
         const fieldsToSearch = (field === 'any') ? HEADERS : [field];
         const results = [];
+
         for (let row of rowStore) {
-            let match = false;
+            let matchedBecause = null;
             for (let f of fieldsToSearch) {
                 const value = row[f] || '';
                 if (regex.test(value)) {
-                    match = true;
+                    matchedBecause = f;
                     break;
                 }
             }
-            if (match) results.push(row);
+            if (matchedBecause) {
+                results.push({ row, matchField: matchedBecause });
+            }
         }
         return results;
     }
 
-    // sorting function
-    function sortResults(results, sortBy, descending) {
-        if (!results.length) return results;
-        const sorted = [...results];
+    // for compatibility with existing sort (which expects array of rows), we adapt
+    function searchRowsLegacy(term, field) {
+        return searchRowsWithMatchInfo(term, field).map(item => item.row);
+    }
+
+    // sorting function (works on array of row objects)
+    function sortResults(rows, sortBy, descending) {
+        if (!rows.length) return rows;
+        const sorted = [...rows];
 
         if (sortBy === 'relevance') {
             sorted.sort((a, b) => {
@@ -588,31 +614,46 @@
         return sorted;
     }
 
-    // render cards
-    function renderCards(rows) {
-        if (!rows.length) {
+    // render cards from array of { row, matchField } (matchField may be null)
+    function renderCardsWithMatchInfo(items) {
+        if (!items.length) {
             cardContainer.innerHTML = `<div class="no-results">no matching entries</div>`;
             resultCountSpan.innerText = `0 records`;
             return;
         }
 
         let cardsHtml = '';
-        const maxRender = Math.min(rows.length, 2000);
+        const maxRender = Math.min(items.length, 2000);
 
         for (let i = 0; i < maxRender; i++) {
-            const r = rows[i];
+            const { row, matchField } = items[i];
 
-            const scientific = r.scientificName || '(no scientific name)';
-            const prep = r.preparation || '—';
-            const count = r.specimenCount || '0';
-            const location = r.location || '';
-            const drawer = r.drawerNumber || '';
+            const scientific = row.scientificName || '(no scientific name)';
+            const prep = row.preparation || '—';
+            const count = row.specimenCount || '0';
+            const location = row.location || '';
+            const drawer = row.drawerNumber || '';
             const locationDisplay = (location ? location : '') + (drawer ? (location ? ' · ' : '') + 'drawer ' + drawer : (drawer ? 'drawer ' + drawer : '—'));
 
-            const mainFields = new Set(['scientificName','preparation','specimenCount','location','drawerNumber']);
-            const extraList = HEADERS.filter(h => !mainFields.has(h) && h !== 'scientificName' && h !== 'preparation' && h !== 'specimenCount' && h !== 'location' && h !== 'drawerNumber');
+            // Determine if we need to show a match badge: when field is restricted to a non-core field
+            // and matchField is not one of the core displayed fields, we show it.
+            let showBadge = false;
+            let badgeField = '';
+            if (lastField !== 'any' && lastField !== '' && matchField && !CORE_FIELDS.has(matchField)) {
+                showBadge = true;
+                badgeField = matchField;
+            } else if (lastField === 'any' && matchField && !CORE_FIELDS.has(matchField)) {
+                // optional: also show if any-field matched a non-core field? we decide to show as well
+                showBadge = true;
+                badgeField = matchField;
+            }
+
+            const extraList = HEADERS.filter(h => !CORE_FIELDS.has(h));
 
             cardsHtml += `<div class="record-card" data-row-idx="${i}">`;
+            if (showBadge) {
+                cardsHtml += `<div class="match-source">match: ${badgeField}</div>`;
+            }
             cardsHtml += `<div class="card-header">`;
             cardsHtml += `<span class="scientific-name">${escapeHtml(scientific)}</span>`;
             cardsHtml += `<span class="specimen-count-badge">${escapeHtml(count)}</span>`;
@@ -628,18 +669,18 @@
             cardsHtml += `<div id="extra-${i}" class="extra-fields">`;
 
             for (let field of extraList) {
-                let val = r[field] || '—';
+                let val = row[field] || '—';
                 cardsHtml += `<div class="extra-item"><span class="extra-label">${field}</span><span class="extra-value">${escapeHtml(val)}</span></div>`;
             }
             cardsHtml += `</div></div></div>`;
         }
 
-        if (rows.length > maxRender) {
-            cardsHtml += `<div class="no-results">... and ${rows.length - maxRender} more records (truncated)</div>`;
+        if (items.length > maxRender) {
+            cardsHtml += `<div class="no-results">... and ${items.length - maxRender} more records (truncated)</div>`;
         }
 
         cardContainer.innerHTML = cardsHtml;
-        resultCountSpan.innerText = `${rows.length} record${rows.length !== 1 ? 's' : ''} shown`;
+        resultCountSpan.innerText = `${items.length} record${items.length !== 1 ? 's' : ''} shown`;
 
         document.querySelectorAll('.expand-toggle').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -666,26 +707,39 @@
             cardContainer.innerHTML = `<div class="no-results">index still loading ...</div>`;
             return;
         }
-        let results = searchRows(term, field);
-        lastSearchResults = results;
+        // get results with match info
+        let items = searchRowsWithMatchInfo(term, field);
+        lastSearchResults = items.map(item => item.row); // store plain rows for sorting reference
         lastTerm = term;
         lastField = field;
 
-        const sorted = sortResults(results, currentSortField, currentSortDesc);
-        renderCards(sorted);
+        // sort the rows (ignore match info for sorting)
+        const sortedRows = sortResults(lastSearchResults, currentSortField, currentSortDesc);
+        // rebuild items in sorted order, preserving matchField from original items (by row reference)
+        const rowToMatch = new Map(items.map(item => [item.row, item.matchField]));
+        const sortedItems = sortedRows.map(row => ({ row, matchField: rowToMatch.get(row) || null }));
+
+        renderCardsWithMatchInfo(sortedItems);
     }
 
     function refreshWithCurrentSort() {
         if (!indexed) return;
-        let results = lastSearchResults;
+        let items;
         if (lastTerm === '' && lastField === 'scientificName') {
-            results = lastSearchResults.length ? lastSearchResults : rowStore.slice(0,200);
+            // preview case: search again to get match info
+            items = searchRowsWithMatchInfo('', 'scientificName');
+            lastSearchResults = items.map(i => i.row);
+        } else {
+            // rebuild from last search using stored term/field
+            items = searchRowsWithMatchInfo(lastTerm, lastField);
+            lastSearchResults = items.map(i => i.row);
         }
-        const sorted = sortResults(results, currentSortField, currentSortDesc);
-        renderCards(sorted);
+        const sortedRows = sortResults(lastSearchResults, currentSortField, currentSortDesc);
+        const rowToMatch = new Map(items.map(item => [item.row, item.matchField]));
+        const sortedItems = sortedRows.map(row => ({ row, matchField: rowToMatch.get(row) || null }));
+        renderCardsWithMatchInfo(sortedItems);
     }
 
-    // Event handlers
     searchBtn.addEventListener('click', () => {
         const term = searchInput.value.trim();
         const field = fieldSelect.value;
@@ -728,43 +782,34 @@
         refreshWithCurrentSort();
     });
 
-    // DOWNLOAD with custom prompt + search term in default name
     downloadBtn.addEventListener('click', () => {
         if (!indexed) return alert('index not ready');
-
         const term = searchInput.value.trim();
         const field = fieldSelect.value;
-        // If empty term & field=scientificName, return whole collection? we'll use all rows.
-        let results;
+        let rows;
         if (term === '' && field === 'scientificName') {
-            results = rowStore;  // whole collection for empty search
+            rows = rowStore;
         } else {
-            results = searchRows(term, field);
+            rows = searchRowsLegacy(term, field);
         }
 
-        if (results.length === 0) {
+        if (rows.length === 0) {
             alert('no records to download');
             return;
         }
 
-        // Build default filename: collection_YYYY-MM-DD_searchTerm.csv
         const dateStr = new Date().toISOString().slice(0,10);
         let safeTerm = term.trim() || 'all';
-        // replace characters not safe for filenames
         safeTerm = safeTerm.replace(/[^a-z0-9_\- ]/gi, '_').substring(0, 50);
         const defaultName = `collection_${dateStr}_${safeTerm}.csv`;
 
-        // Prompt user
         let fileName = prompt('Enter filename for CSV download:', defaultName);
-        if (!fileName) return; // user cancelled
-
-        // ensure .csv extension
+        if (!fileName) return;
         if (!fileName.toLowerCase().endsWith('.csv')) fileName += '.csv';
 
-        // Generate CSV
         const csvRows = [];
         csvRows.push(HEADERS.join(','));
-        results.forEach(row => {
+        rows.forEach(row => {
             const vals = HEADERS.map(h => {
                 let val = row[h] || '';
                 if (val.includes(',') || val.includes('"') || val.includes('\n')) {

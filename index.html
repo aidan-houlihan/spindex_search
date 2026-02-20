@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entomological collection · card view</title>
+    <title>Entomological collection · card view + sort</title>
     <style>
         * {
             box-sizing: border-box;
@@ -69,7 +69,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 14px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             align-items: flex-end;
         }
         .field-group {
@@ -107,6 +107,48 @@
             padding: 2px 14px;
             border-radius: 50px;
         }
+        .sort-panel {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+            margin: 10px 0 18px 0;
+            background: #f4f9ee;
+            padding: 12px 20px;
+            border-radius: 40px;
+        }
+        .sort-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+            flex: 3 1 300px;
+        }
+        .sort-controls select {
+            background: white;
+            border: 1px solid #b9d2ac;
+            border-radius: 30px;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .sort-order {
+            display: flex;
+            gap: 8px;
+        }
+        .sort-order button {
+            background: white;
+            border: 1.5px solid #a6c09c;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .sort-order button.active-sort {
+            background: #3f6a42;
+            border-color: #2a4d2c;
+            color: white;
+        }
         .action-buttons {
             display: flex;
             gap: 12px;
@@ -140,9 +182,6 @@
         button:hover {
             background: #e5f0de;
             border-color: #7fa675;
-        }
-        button.primary:hover {
-            background: #2f5132;
         }
         .results-meta {
             display: flex;
@@ -314,13 +353,6 @@
             border-top: 1px dashed #cedfc4;
             padding-top: 15px;
         }
-        /* small utility */
-        .text-ellipsis {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 200px;
-        }
     </style>
 </head>
 <body>
@@ -349,7 +381,7 @@
                 <option value="genus">genus</option>
                 <option value="species">species</option>
                 <option value="subspecies">subspecies</option>
-                <option value="scientificName">scientificName</option>
+                <option value="scientificName" selected>scientificName (default)</option>
                 <option value="order">order</option>
                 <option value="class">class</option>
                 <option value="preparation">preparation</option>
@@ -364,7 +396,29 @@
         <div class="action-buttons">
             <button id="searchBtn" class="primary">search</button>
             <button id="clearBtn">clear</button>
-            <button id="downloadBtn" class="download-btn" title="download visible results as CSV">download CSV</button>
+            <button id="downloadBtn" class="download-btn">download CSV</button>
+        </div>
+    </div>
+
+    <!-- sort bar -->
+    <div class="sort-panel">
+        <div class="sort-controls">
+            <span style="color:#2e4b32; font-weight:500;">sort by:</span>
+            <select id="sortFieldSelect">
+                <option value="relevance" selected>best match (relevance)</option>
+                <option value="specimenCount">specimen count (descending)</option>
+                <option value="scientificName">scientific name A-Z</option>
+                <option value="family">family</option>
+                <option value="genus">genus</option>
+                <option value="preparation">preparation</option>
+                <option value="location">location</option>
+                <option value="drawerNumber">drawer number</option>
+                <option value="author">author</option>
+            </select>
+            <div class="sort-order" id="sortOrderToggle">
+                <button id="sortDescBtn" class="active-sort" data-order="desc">descending</button>
+                <button id="sortAscBtn" data-order="asc">ascending</button>
+            </div>
         </div>
     </div>
 
@@ -372,26 +426,31 @@
         <div class="count-display" id="resultCount">0 records shown</div>
     </div>
 
-    <!-- card container (replaces old table) -->
+    <!-- card container -->
     <div id="cardContainer" class="card-grid">
         <div class="no-results">waiting for index ...</div>
     </div>
 
-    <footer>client‑side index · location + drawerNumber combined in card</footer>
+    <footer>location displayed before drawer · default search in scientificName · relevance + count sort</footer>
 </div>
 
 <script>
 (function() {
-    const CSV_URL = 'collection.csv';         // place your CSV next to index.html
+    const CSV_URL = 'collection.csv';
     const HEADERS = [
         "specimenCount","author","class","comments","curation","family","genus",
         "species","subspecies","scientificName","enteredBy","location","order",
         "preparation","drawerNumber"
     ];
 
-    let rowStore = [];                 // array of objects
+    let rowStore = [];                 // all rows
     let totalSpecimenSum = 0;
     let indexed = false;
+    let lastSearchResults = [];        // store last results for sorting
+    let lastTerm = '';
+    let lastField = 'scientificName';  // default search field
+    let currentSortField = 'relevance';
+    let currentSortDesc = true;        // descending (best match relies on desc by specimenCount)
 
     // DOM elements
     const loadStatus = document.getElementById('loadStatus');
@@ -403,6 +462,12 @@
     const downloadBtn = document.getElementById('downloadBtn');
     const cardContainer = document.getElementById('cardContainer');
     const resultCountSpan = document.getElementById('resultCount');
+    const sortFieldSelect = document.getElementById('sortFieldSelect');
+    const sortDescBtn = document.getElementById('sortDescBtn');
+    const sortAscBtn = document.getElementById('sortAscBtn');
+
+    // set default field to scientificName (selected in HTML, but sync)
+    fieldSelect.value = 'scientificName';
 
     // load & parse CSV
     async function loadAndIndexCsv() {
@@ -454,8 +519,8 @@
             loadStatus.innerText = `index ready: ${rowStore.length} rows`;
             totalSpecimensSpan.innerText = `specimens: ${totalSpecimenSum.toLocaleString()}`;
 
-            // initial preview (first 150)
-            renderCards(rowStore.slice(0, 200));
+            // initial preview (first 200) with default search? run empty search on scientificName? but empty term returns preview anyway.
+            performSearchAndRender('', 'scientificName');
         } catch (err) {
             console.error(err);
             loadStatus.innerText = 'failed to load CSV. Place collection.csv in same folder.';
@@ -464,18 +529,18 @@
         }
     }
 
-    // search logic (regex / plain)
+    // search logic (returns array)
     function searchRows(term, field) {
         if (!indexed) return [];
         if (term === '') {
-            return rowStore.slice(0, 200);   // preview first 200
+            return rowStore.slice(0, 200);   // preview 200
         }
 
         let regex;
         try {
             regex = new RegExp(term, 'i');
         } catch (e) {
-            return [];  // invalid regex -> empty
+            return [];
         }
 
         const fieldsToSearch = (field === 'any') ? HEADERS : [field];
@@ -494,7 +559,38 @@
         return results;
     }
 
-    // render cards
+    // sorting function
+    function sortResults(results, sortBy, descending) {
+        if (!results.length) return results;
+        const sorted = [...results];
+
+        if (sortBy === 'relevance') {
+            // default: best match (we use specimenCount descending as proxy for "best")
+            sorted.sort((a, b) => {
+                const countA = parseInt(a.specimenCount, 10) || 0;
+                const countB = parseInt(b.specimenCount, 10) || 0;
+                return countB - countA; // always desc for relevance
+            });
+        } else {
+            sorted.sort((a, b) => {
+                let valA = a[sortBy] || '';
+                let valB = b[sortBy] || '';
+                if (sortBy === 'specimenCount') {
+                    valA = parseInt(valA, 10) || 0;
+                    valB = parseInt(valB, 10) || 0;
+                } else {
+                    valA = valA.toLowerCase();
+                    valB = valB.toLowerCase();
+                }
+                if (valA < valB) return descending ? 1 : -1;
+                if (valA > valB) return descending ? -1 : 1;
+                return 0;
+            });
+        }
+        return sorted;
+    }
+
+    // render cards from results array
     function renderCards(rows) {
         if (!rows.length) {
             cardContainer.innerHTML = `<div class="no-results">no matching entries</div>`;
@@ -503,65 +599,55 @@
         }
 
         let cardsHtml = '';
-        const maxRender = Math.min(rows.length, 2000); // safety cap
+        const maxRender = Math.min(rows.length, 2000);
 
         for (let i = 0; i < maxRender; i++) {
             const r = rows[i];
 
-            // core fields
             const scientific = r.scientificName || '(no scientific name)';
             const prep = r.preparation || '—';
             const count = r.specimenCount || '0';
             const location = r.location || '';
             const drawer = r.drawerNumber || '';
-            const locationDisplay = (drawer ? drawer + (location ? ' · ' + location : '') : (location || '—'));
+            // location displayed BEFORE drawerNumber (per request)
+            const locationDisplay = (location ? location : '') + (drawer ? (location ? ' · ' : '') + 'drawer ' + drawer : (drawer ? 'drawer ' + drawer : '—'));
 
-            // build extra fields (all other headers except the 5 we show in main card)
             const mainFields = new Set(['scientificName','preparation','specimenCount','location','drawerNumber']);
             const extraList = HEADERS.filter(h => !mainFields.has(h) && h !== 'scientificName' && h !== 'preparation' && h !== 'specimenCount' && h !== 'location' && h !== 'drawerNumber');
 
-            // start card
             cardsHtml += `<div class="record-card" data-row-idx="${i}">`;
             cardsHtml += `<div class="card-header">`;
             cardsHtml += `<span class="scientific-name">${escapeHtml(scientific)}</span>`;
             cardsHtml += `<span class="specimen-count-badge">${escapeHtml(count)}</span>`;
-            cardsHtml += `</div>`; // header
+            cardsHtml += `</div>`;
 
-            // key details row
             cardsHtml += `<div class="key-details">`;
             cardsHtml += `<div class="detail-item"><span class="detail-label">preparation</span><span class="detail-value">${escapeHtml(prep)}</span></div>`;
             cardsHtml += `<div class="detail-item"><span class="detail-label">location</span><span class="detail-value location-value">${escapeHtml(locationDisplay)}</span></div>`;
             cardsHtml += `</div>`;
 
-            // expand button + extra fields container
             cardsHtml += `<div class="expand-section">`;
             cardsHtml += `<button class="expand-toggle" data-card="card-${i}">＋ show all fields</button>`;
             cardsHtml += `<div id="extra-${i}" class="extra-fields">`;
 
-            // populate extra fields
             for (let field of extraList) {
                 let val = r[field] || '—';
                 cardsHtml += `<div class="extra-item"><span class="extra-label">${field}</span><span class="extra-value">${escapeHtml(val)}</span></div>`;
             }
-            // also add any missing? include author, family, genus, species etc already inside extraList.
-            cardsHtml += `</div>`; // extra-fields
-            cardsHtml += `</div>`; // expand-section
-            cardsHtml += `</div>`; // card
+            cardsHtml += `</div></div></div>`;
         }
 
         if (rows.length > maxRender) {
-            cardsHtml += `<div class="no-results">... and ${rows.length - maxRender} more records (truncated for display)</div>`;
+            cardsHtml += `<div class="no-results">... and ${rows.length - maxRender} more records (truncated)</div>`;
         }
 
         cardContainer.innerHTML = cardsHtml;
         resultCountSpan.innerText = `${rows.length} record${rows.length !== 1 ? 's' : ''} shown`;
 
-        // attach expand/collapse listeners
         document.querySelectorAll('.expand-toggle').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const cardId = btn.dataset.card; // card-<i>
-                const extraDiv = btn.nextElementSibling; // extra-fields div
+                const extraDiv = btn.nextElementSibling;
                 if (extraDiv && extraDiv.classList.contains('extra-fields')) {
                     extraDiv.classList.toggle('visible');
                     btn.innerText = extraDiv.classList.contains('visible') ? '− hide extra fields' : '＋ show all fields';
@@ -583,11 +669,30 @@
             cardContainer.innerHTML = `<div class="no-results">index still loading ...</div>`;
             return;
         }
-        const rows = searchRows(term, field);
-        renderCards(rows);
+        let results = searchRows(term, field);
+        // store for sorting updates
+        lastSearchResults = results;
+        lastTerm = term;
+        lastField = field;
+
+        // apply current sort
+        const sorted = sortResults(results, currentSortField, currentSortDesc);
+        renderCards(sorted);
     }
 
-    // event handlers
+    // refresh display using last search but with new sort
+    function refreshWithCurrentSort() {
+        if (!indexed) return;
+        let results = lastSearchResults;
+        if (lastTerm === '' && lastField === 'scientificName') {
+            // if empty, we might have preview 200; keep as is
+            results = lastSearchResults.length ? lastSearchResults : rowStore.slice(0,200);
+        }
+        const sorted = sortResults(results, currentSortField, currentSortDesc);
+        renderCards(sorted);
+    }
+
+    // Event handlers
     searchBtn.addEventListener('click', () => {
         const term = searchInput.value.trim();
         const field = fieldSelect.value;
@@ -596,23 +701,54 @@
 
     clearBtn.addEventListener('click', () => {
         searchInput.value = '';
-        fieldSelect.value = 'any';
+        fieldSelect.value = 'scientificName';
         if (indexed) {
-            renderCards(rowStore.slice(0, 200));
+            performSearchAndRender('', 'scientificName');
         } else {
             cardContainer.innerHTML = `<div class="no-results">loading ...</div>`;
         }
+    });
+
+    // Sort field change
+    sortFieldSelect.addEventListener('change', (e) => {
+        currentSortField = e.target.value;
+        // for relevance, force desc and disable buttons? but we keep as is.
+        if (currentSortField === 'relevance') {
+            // relevance always desc, but we let visual reflect.
+            currentSortDesc = true;
+            sortDescBtn.classList.add('active-sort');
+            sortAscBtn.classList.remove('active-sort');
+        }
+        refreshWithCurrentSort();
+    });
+
+    sortDescBtn.addEventListener('click', () => {
+        if (currentSortField === 'relevance') {
+            // keep desc, no change
+            return;
+        }
+        currentSortDesc = true;
+        sortDescBtn.classList.add('active-sort');
+        sortAscBtn.classList.remove('active-sort');
+        refreshWithCurrentSort();
+    });
+
+    sortAscBtn.addEventListener('click', () => {
+        if (currentSortField === 'relevance') {
+            // cannot change relevance order, but we toggle anyway? we prevent
+            return;
+        }
+        currentSortDesc = false;
+        sortAscBtn.classList.add('active-sort');
+        sortDescBtn.classList.remove('active-sort');
+        refreshWithCurrentSort();
     });
 
     downloadBtn.addEventListener('click', () => {
         if (!indexed) return alert('index not ready');
         const term = searchInput.value.trim();
         const field = fieldSelect.value;
-        let results = searchRows(term, field);
-        // if empty term we return full index? for download we use full if empty.
-        if (term === '' && field === 'any') {
-            results = rowStore;  // entire collection
-        }
+        let results = (term === '' && field === 'scientificName') ? rowStore : searchRows(term, field);
         if (results.length === 0) {
             alert('no records to download');
             return;
@@ -650,6 +786,7 @@
         }
     });
 
+    // start loading
     loadAndIndexCsv();
 })();
 </script>

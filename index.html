@@ -3,835 +3,655 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entomological Collection DB (100k+ entries)</title>
+    <title>Entomological collection · card view</title>
     <style>
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
         }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #f5f5f5;
-            padding: 20px;
+            background: #f2efe8;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 16px 12px;
         }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 30px;
+        .app-container {
+            max-width: 1600px;
+            width: 100%;
+            background: #fefcf7;
+            box-shadow: 0 8px 20px rgba(40, 50, 30, 0.08);
+            border-radius: 32px;
+            padding: 24px 28px;
         }
-
         h1 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-            border-bottom: 3px solid #27ae60;
-            padding-bottom: 10px;
-        }
-
-        .status-bar {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px 20px;
-            margin: 20px 0;
+            font-size: 2rem;
+            font-weight: 400;
+            letter-spacing: -0.3px;
+            color: #2b4a2f;
+            margin: 0 0 6px 0;
+            border-bottom: 2px solid #d3e0c8;
+            padding-bottom: 14px;
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 12px;
             flex-wrap: wrap;
-            border: 1px solid #dee2e6;
         }
-
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #f39c12;
+        h1 span {
+            background: #e3eed9;
+            font-size: 0.9rem;
+            font-weight: 400;
+            padding: 6px 16px;
+            border-radius: 40px;
+            color: #1f3b22;
         }
-        .status-indicator.ready { background: #27ae60; }
-        .status-indicator.error { background: #e74c3c; }
-
-        .stats {
-            display: flex;
-            gap: 20px;
-            margin-left: auto;
-        }
-
-        .stat {
-            background: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .search-container {
-            background: #fff;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .search-row {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .search-input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.2s;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #27ae60;
-        }
-
-        .search-button {
-            background: #27ae60;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .search-button:hover {
-            background: #2ecc71;
-        }
-
-        .search-button:disabled {
-            background: #95a5a6;
-            cursor: not-allowed;
-        }
-
-        .advanced-toggle {
-            color: #27ae60;
-            cursor: pointer;
-            user-select: none;
-            font-weight: 600;
-            margin: 10px 0;
-        }
-
-        .advanced-search {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-            padding: 20px 0;
-        }
-
-        .field-search {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .field-search label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #666;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-        }
-
-        .field-search input {
-            padding: 8px 12px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .results-header {
+        .stats-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 20px 0;
+            background: #edf5e6;
+            padding: 12px 20px;
+            border-radius: 40px;
+            margin: 18px 0 24px 0;
+            font-size: 0.95rem;
+            color: #2e4b32;
+            flex-wrap: wrap;
+            gap: 15px;
         }
-
-        .results-count {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .download-button {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .download-button:hover {
-            background: #2980b9;
-        }
-
-        .table-container {
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-            min-height: 400px;
-        }
-
-        .virtual-scroll {
-            height: 600px;
-            overflow-y: auto;
-            position: relative;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        th {
-            background: #2c3e50;
-            color: white;
-            padding: 12px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            text-align: left;
-        }
-
-        td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        tr:hover {
-            background: #f8f9fa;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #27ae60;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .page-btn {
-            padding: 5px 10px;
-            border: 1px solid #dee2e6;
+        .badge {
             background: white;
+            border-radius: 30px;
+            padding: 6px 18px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .search-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 30px;
+            align-items: flex-end;
+        }
+        .field-group {
+            flex: 2 1 260px;
+            min-width: 200px;
+        }
+        .field-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #4b6b4e;
+            margin-bottom: 4px;
+        }
+        .field-group input, .field-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid #cbdcc2;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            transition: 0.15s;
+            outline: none;
+        }
+        .field-group input:focus, .field-group select:focus {
+            border-color: #558b4e;
+            box-shadow: 0 0 0 3px rgba(85,139,78,0.2);
+        }
+        .regex-hint {
+            margin-left: 12px;
+            font-size: 0.8rem;
+            color: #6f6f5e;
+            background: #f4f4ea;
+            padding: 2px 14px;
+            border-radius: 50px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        button {
+            background: white;
+            border: 1.5px solid #a6c09c;
+            padding: 10px 22px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: #2c4a2e;
             cursor: pointer;
-            border-radius: 4px;
+            transition: 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.02);
         }
-
-        .page-btn.active {
-            background: #27ae60;
+        button.primary {
+            background: #3f6a42;
+            border-color: #2a4d2c;
             color: white;
-            border-color: #27ae60;
+        }
+        button.primary:hover {
+            background: #2f5132;
+        }
+        button:hover {
+            background: #e5f0de;
+            border-color: #7fa675;
+        }
+        button.primary:hover {
+            background: #2f5132;
+        }
+        .results-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 18px 0 18px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .count-display {
+            background: #e2e9db;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+        }
+        .download-btn {
+            background: #f9f7f0;
+            border: 2px solid #aabf9e;
         }
 
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #2c3e50;
+        /* card grid layout */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+            padding: 6px 0 20px 0;
+        }
+        .record-card {
+            background: white;
+            border: 1px solid #dde5d4;
+            border-radius: 24px;
+            padding: 18px 18px 14px 18px;
+            box-shadow: 0 4px 12px rgba(0, 25, 5, 0.03);
+            transition: 0.1s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .record-card:hover {
+            border-color: #aec2a2;
+            box-shadow: 0 8px 16px rgba(60, 90, 40, 0.1);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px dashed #cfddc5;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .scientific-name {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #1c3f20;
+            line-height: 1.3;
+            word-break: break-word;
+            flex: 1;
+        }
+        .specimen-count-badge {
+            background: #2b4a2f;
             color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            animation: slideIn 0.3s ease;
-            z-index: 1000;
+            border-radius: 40px;
+            padding: 4px 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
+            margin-left: 10px;
         }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        .key-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 20px;
+            margin-bottom: 14px;
+            background: #f7faf4;
+            padding: 12px 14px;
+            border-radius: 20px;
+        }
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .detail-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #678d5e;
+            font-weight: 600;
+        }
+        .detail-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1d331f;
+            margin-top: 2px;
+            word-break: break-word;
+        }
+        .detail-value.location-value {
+            background: #e4edd9;
+            padding: 2px 12px;
+            border-radius: 30px;
+            display: inline-block;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+        }
+        .expand-section {
+            margin-top: 8px;
+            border-top: 1px solid #e2ebd8;
+            padding-top: 12px;
+        }
+        .expand-toggle {
+            background: none;
+            border: none;
+            color: #4f7353;
+            font-weight: 600;
+            padding: 6px 0;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .expand-toggle:hover {
+            color: #234d27;
+            background: none;
+            border: none;
+            box-shadow: none;
+            text-decoration: underline;
+        }
+        .extra-fields {
+            display: none;
+            background: #f4f9ef;
+            border-radius: 18px;
+            padding: 14px 16px;
+            margin-top: 14px;
+            font-size: 0.9rem;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px 16px;
+        }
+        .extra-fields.visible {
+            display: grid;
+        }
+        .extra-item {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px dotted #c5d7b8;
+            padding-bottom: 6px;
+        }
+        .extra-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: #6d8f63;
+            font-weight: 600;
+        }
+        .extra-value {
+            font-weight: 450;
+            color: #1a311e;
+            word-break: break-word;
+        }
+        .no-results {
+            text-align: center;
+            color: #a3b89a;
+            font-style: italic;
+            padding: 50px;
+            grid-column: 1 / -1;
+        }
+        footer {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #7c8f74;
+            text-align: right;
+            border-top: 1px dashed #cedfc4;
+            padding-top: 15px;
+        }
+        /* small utility */
+        .text-ellipsis {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Entomological Collection Database</h1>
-        <p class="subtitle">Optimized for large collections (100,000+ specimens)</p>
+<div class="app-container">
+    <h1>
+        Entomological collection · card explorer
+        <span>static index · 100k+ rows</span>
+    </h1>
 
-        <!-- Status Bar -->
-        <div class="status-bar" id="statusBar">
-            <span class="status-indicator" id="statusIndicator"></span>
-            <span id="statusMessage">Initializing...</span>
-            <div class="stats" id="stats"></div>
-        </div>
-
-        <!-- Search -->
-        <div class="search-container">
-            <div class="search-row">
-                <input type="text" class="search-input" id="globalSearch" 
-                       placeholder="Search all fields (supports regex)..." 
-                       autocomplete="off">
-                <button class="search-button" id="searchBtn" onclick="performSearch()">Search</button>
-            </div>
-            
-            <div class="advanced-toggle" onclick="toggleAdvanced()">
-                ▼ Advanced Search
-            </div>
-            
-            <div id="advancedPanel" style="display: none;">
-                <div class="advanced-search" id="fieldSearches">
-                    <!-- Dynamically populated -->
-                </div>
-                <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
-                    <input type="checkbox" id="useRegex" checked> 
-                    Enable regex search
-                </label>
-            </div>
-        </div>
-
-        <!-- Results -->
-        <div class="results-header">
-            <span class="results-count" id="resultsCount">0 results</span>
-            <button class="download-button" id="downloadBtn" onclick="downloadResults()">
-                Download CSV
-            </button>
-        </div>
-
-        <!-- Virtual Scrolled Table -->
-        <div class="table-container">
-            <div class="virtual-scroll" id="scrollContainer" onscroll="handleScroll()">
-                <table>
-                    <thead id="tableHeader"></thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
-                <div id="loadingIndicator" style="display: none; text-align: center; padding: 20px;">
-                    <div class="loading-spinner"></div> Loading more results...
-                </div>
-            </div>
-        </div>
-
-        <!-- Pagination -->
-        <div class="pagination" id="pagination"></div>
+    <div class="stats-bar">
+        <div class="badge" id="loadStatus">loading index ...</div>
+        <div class="badge" id="totalSpecimens">specimens: —</div>
     </div>
 
-    <script>
-        // Configuration
-        const BASE_PATH = ''; // Set if files are in subdirectory
-        const PAGE_SIZE = 50; // Results per page
-        const BUFFER_SIZE = 20; // Extra rows to load for smooth scrolling
-        
-        // State
-        let db = {
-            indexes: null,
-            chunks: [],
-            currentResults: [],
-            currentPage: 1,
-            totalPages: 1,
-            visibleRows: [],
-            isLoading: false,
-            headers: []
-        };
+    <div class="search-panel">
+        <div class="field-group">
+            <label>search term (plain or regex)</label>
+            <input type="text" id="searchInput" placeholder="e.g. ^Myrme.*| formicaria" value="">
+            <div class="regex-hint">use JavaScript regex, e.g. ^Atta or cephalo(tes|ides)</div>
+        </div>
+        <div class="field-group">
+            <label>restrict to field</label>
+            <select id="fieldSelect">
+                <option value="any">any field (full text)</option>
+                <option value="family">family</option>
+                <option value="genus">genus</option>
+                <option value="species">species</option>
+                <option value="subspecies">subspecies</option>
+                <option value="scientificName">scientificName</option>
+                <option value="order">order</option>
+                <option value="class">class</option>
+                <option value="preparation">preparation</option>
+                <option value="location">location</option>
+                <option value="drawerNumber">drawerNumber</option>
+                <option value="comments">comments</option>
+                <option value="curation">curation</option>
+                <option value="author">author</option>
+                <option value="enteredBy">enteredBy</option>
+            </select>
+        </div>
+        <div class="action-buttons">
+            <button id="searchBtn" class="primary">search</button>
+            <button id="clearBtn">clear</button>
+            <button id="downloadBtn" class="download-btn" title="download visible results as CSV">download CSV</button>
+        </div>
+    </div>
 
-        // Initialize: load quick index first, then full index in background
-        async function initialize() {
-            try {
-                updateStatus('loading', 'Loading index...');
-                
-                // Load quick index first
-                const quickIndex = await fetchJSON('quick-index.json');
-                updateStats(quickIndex);
-                
-                // Load full index in background
-                setTimeout(() => loadFullIndex(), 100);
-                
-            } catch (error) {
-                console.error('Initialization failed:', error);
-                updateStatus('error', 'Failed to load database. Check console for details.');
-            }
-        }
+    <div class="results-meta">
+        <div class="count-display" id="resultCount">0 records shown</div>
+    </div>
 
-        async function loadFullIndex() {
-            try {
-                db.indexes = await fetchJSON('index.json');
-                
-                // Pre-load first few chunks
-                const chunksToLoad = Math.min(3, db.indexes.chunks.length);
-                for (let i = 0; i < chunksToLoad; i++) {
-                    await loadChunk(i);
+    <!-- card container (replaces old table) -->
+    <div id="cardContainer" class="card-grid">
+        <div class="no-results">waiting for index ...</div>
+    </div>
+
+    <footer>client‑side index · location + drawerNumber combined in card</footer>
+</div>
+
+<script>
+(function() {
+    const CSV_URL = 'collection.csv';         // place your CSV next to index.html
+    const HEADERS = [
+        "specimenCount","author","class","comments","curation","family","genus",
+        "species","subspecies","scientificName","enteredBy","location","order",
+        "preparation","drawerNumber"
+    ];
+
+    let rowStore = [];                 // array of objects
+    let totalSpecimenSum = 0;
+    let indexed = false;
+
+    // DOM elements
+    const loadStatus = document.getElementById('loadStatus');
+    const totalSpecimensSpan = document.getElementById('totalSpecimens');
+    const searchInput = document.getElementById('searchInput');
+    const fieldSelect = document.getElementById('fieldSelect');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const cardContainer = document.getElementById('cardContainer');
+    const resultCountSpan = document.getElementById('resultCount');
+
+    // load & parse CSV
+    async function loadAndIndexCsv() {
+        try {
+            loadStatus.innerText = 'downloading CSV ...';
+            const response = await fetch(CSV_URL);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const text = await response.text();
+            loadStatus.innerText = 'parsing rows (large file, please wait) ...';
+
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            if (lines.length === 0) throw new Error('empty CSV');
+
+            const headerLine = lines[0].split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+            const colIndex = {};
+            HEADERS.forEach(h => {
+                const idx = headerLine.findIndex(c => c.toLowerCase() === h.toLowerCase());
+                colIndex[h] = idx;
+            });
+
+            const rows = [];
+            let specimenTotal = 0;
+            const totalLines = lines.length - 1;
+            const chunkSize = 5000;
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.trim() === '') continue;
+                const parts = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+
+                const row = {};
+                HEADERS.forEach(h => {
+                    const idx = colIndex[h];
+                    row[h] = (idx !== undefined && idx >= 0 && idx < parts.length) ? parts[idx] : '';
+                });
+
+                const countVal = parseInt(row.specimenCount, 10);
+                if (!isNaN(countVal)) specimenTotal += countVal;
+                rows.push(row);
+
+                if (rows.length % chunkSize === 0) {
+                    loadStatus.innerText = `indexing: ${rows.length} / ${totalLines} rows`;
+                    await new Promise(r => setTimeout(r, 0));
                 }
-                
-                updateStatus('ready', `Ready - ${db.indexes.totalRows.toLocaleString()} specimens indexed`);
-                
-                // Show all fields in advanced search
-                generateFieldInputs();
-                
-                // Load initial data
-                performSearch();
-                
-            } catch (error) {
-                console.error('Failed to load full index:', error);
-                updateStatus('error', 'Failed to load search indexes');
             }
+
+            rowStore = rows;
+            totalSpecimenSum = specimenTotal;
+            indexed = true;
+            loadStatus.innerText = `index ready: ${rowStore.length} rows`;
+            totalSpecimensSpan.innerText = `specimens: ${totalSpecimenSum.toLocaleString()}`;
+
+            // initial preview (first 150)
+            renderCards(rowStore.slice(0, 200));
+        } catch (err) {
+            console.error(err);
+            loadStatus.innerText = 'failed to load CSV. Place collection.csv in same folder.';
+            totalSpecimensSpan.innerText = 'error';
+            cardContainer.innerHTML = `<div class="no-results"> error: ${err.message}. make sure collection.csv is present</div>`;
+        }
+    }
+
+    // search logic (regex / plain)
+    function searchRows(term, field) {
+        if (!indexed) return [];
+        if (term === '') {
+            return rowStore.slice(0, 200);   // preview first 200
         }
 
-        async function fetchJSON(filename) {
-            const response = await fetch(`${BASE_PATH}${filename}`);
-            if (!response.ok) throw new Error(`Failed to load ${filename}`);
-            return await response.json();
+        let regex;
+        try {
+            regex = new RegExp(term, 'i');
+        } catch (e) {
+            return [];  // invalid regex -> empty
         }
 
-        async function loadChunk(chunkId) {
-            if (db.chunks[chunkId]) return db.chunks[chunkId];
-            
-            try {
-                const response = await fetch(`${BASE_PATH}chunk_${chunkId}.json.gz`);
-                const buffer = await response.arrayBuffer();
-                
-                // Decompress with pako (will load dynamically)
-                const pako = await loadPako();
-                const decompressed = pako.ungzip(new Uint8Array(buffer), { to: 'string' });
-                const chunk = JSON.parse(decompressed);
-                
-                db.chunks[chunkId] = chunk;
-                return chunk;
-            } catch (error) {
-                console.error(`Failed to load chunk ${chunkId}:`, error);
-                return null;
+        const fieldsToSearch = (field === 'any') ? HEADERS : [field];
+        const results = [];
+        for (let row of rowStore) {
+            let match = false;
+            for (let f of fieldsToSearch) {
+                const value = row[f] || '';
+                if (regex.test(value)) {
+                    match = true;
+                    break;
+                }
             }
+            if (match) results.push(row);
+        }
+        return results;
+    }
+
+    // render cards
+    function renderCards(rows) {
+        if (!rows.length) {
+            cardContainer.innerHTML = `<div class="no-results">no matching entries</div>`;
+            resultCountSpan.innerText = `0 records`;
+            return;
         }
 
-        function loadPako() {
-            return new Promise((resolve, reject) => {
-                if (window.pako) {
-                    resolve(window.pako);
-                } else {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js';
-                    script.onload = () => resolve(window.pako);
-                    script.onerror = reject;
-                    document.head.appendChild(script);
+        let cardsHtml = '';
+        const maxRender = Math.min(rows.length, 2000); // safety cap
+
+        for (let i = 0; i < maxRender; i++) {
+            const r = rows[i];
+
+            // core fields
+            const scientific = r.scientificName || '(no scientific name)';
+            const prep = r.preparation || '—';
+            const count = r.specimenCount || '0';
+            const location = r.location || '';
+            const drawer = r.drawerNumber || '';
+            const locationDisplay = (drawer ? drawer + (location ? ' · ' + location : '') : (location || '—'));
+
+            // build extra fields (all other headers except the 5 we show in main card)
+            const mainFields = new Set(['scientificName','preparation','specimenCount','location','drawerNumber']);
+            const extraList = HEADERS.filter(h => !mainFields.has(h) && h !== 'scientificName' && h !== 'preparation' && h !== 'specimenCount' && h !== 'location' && h !== 'drawerNumber');
+
+            // start card
+            cardsHtml += `<div class="record-card" data-row-idx="${i}">`;
+            cardsHtml += `<div class="card-header">`;
+            cardsHtml += `<span class="scientific-name">${escapeHtml(scientific)}</span>`;
+            cardsHtml += `<span class="specimen-count-badge">${escapeHtml(count)}</span>`;
+            cardsHtml += `</div>`; // header
+
+            // key details row
+            cardsHtml += `<div class="key-details">`;
+            cardsHtml += `<div class="detail-item"><span class="detail-label">preparation</span><span class="detail-value">${escapeHtml(prep)}</span></div>`;
+            cardsHtml += `<div class="detail-item"><span class="detail-label">location</span><span class="detail-value location-value">${escapeHtml(locationDisplay)}</span></div>`;
+            cardsHtml += `</div>`;
+
+            // expand button + extra fields container
+            cardsHtml += `<div class="expand-section">`;
+            cardsHtml += `<button class="expand-toggle" data-card="card-${i}">＋ show all fields</button>`;
+            cardsHtml += `<div id="extra-${i}" class="extra-fields">`;
+
+            // populate extra fields
+            for (let field of extraList) {
+                let val = r[field] || '—';
+                cardsHtml += `<div class="extra-item"><span class="extra-label">${field}</span><span class="extra-value">${escapeHtml(val)}</span></div>`;
+            }
+            // also add any missing? include author, family, genus, species etc already inside extraList.
+            cardsHtml += `</div>`; // extra-fields
+            cardsHtml += `</div>`; // expand-section
+            cardsHtml += `</div>`; // card
+        }
+
+        if (rows.length > maxRender) {
+            cardsHtml += `<div class="no-results">... and ${rows.length - maxRender} more records (truncated for display)</div>`;
+        }
+
+        cardContainer.innerHTML = cardsHtml;
+        resultCountSpan.innerText = `${rows.length} record${rows.length !== 1 ? 's' : ''} shown`;
+
+        // attach expand/collapse listeners
+        document.querySelectorAll('.expand-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const cardId = btn.dataset.card; // card-<i>
+                const extraDiv = btn.nextElementSibling; // extra-fields div
+                if (extraDiv && extraDiv.classList.contains('extra-fields')) {
+                    extraDiv.classList.toggle('visible');
+                    btn.innerText = extraDiv.classList.contains('visible') ? '− hide extra fields' : '＋ show all fields';
                 }
             });
+        });
+    }
+
+    function escapeHtml(unsafe) {
+        if (unsafe === undefined || unsafe === null) return '';
+        return String(unsafe).replace(/[&<>"']/g, function(m) {
+            if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;';
+            if (m === '"') return '&quot;'; return '&#039;';
+        });
+    }
+
+    function performSearchAndRender(term, field) {
+        if (!indexed) {
+            cardContainer.innerHTML = `<div class="no-results">index still loading ...</div>`;
+            return;
+        }
+        const rows = searchRows(term, field);
+        renderCards(rows);
+    }
+
+    // event handlers
+    searchBtn.addEventListener('click', () => {
+        const term = searchInput.value.trim();
+        const field = fieldSelect.value;
+        performSearchAndRender(term, field);
+    });
+
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        fieldSelect.value = 'any';
+        if (indexed) {
+            renderCards(rowStore.slice(0, 200));
+        } else {
+            cardContainer.innerHTML = `<div class="no-results">loading ...</div>`;
+        }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+        if (!indexed) return alert('index not ready');
+        const term = searchInput.value.trim();
+        const field = fieldSelect.value;
+        let results = searchRows(term, field);
+        // if empty term we return full index? for download we use full if empty.
+        if (term === '' && field === 'any') {
+            results = rowStore;  // entire collection
+        }
+        if (results.length === 0) {
+            alert('no records to download');
+            return;
         }
 
-        function generateFieldInputs() {
-            if (!db.indexes) return;
-            
-            const container = document.getElementById('fieldSearches');
-            container.innerHTML = '';
-            
-            // Prioritize important fields
-            const importantFields = ['family', 'genus', 'species', 'subspecies', 'location', 'drawerNumber', 'preparation'];
-            const otherFields = db.indexes.headers.filter(h => !importantFields.includes(h));
-            
-            [...importantFields, ...otherFields].forEach(field => {
-                const div = document.createElement('div');
-                div.className = 'field-search';
-                
-                const label = document.createElement('label');
-                label.textContent = field.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
-                label.htmlFor = `field_${field}`;
-                
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.id = `field_${field}`;
-                input.placeholder = `Search ${field}...`;
-                input.onkeyup = (e) => e.key === 'Enter' && performSearch();
-                
-                div.appendChild(label);
-                div.appendChild(input);
-                container.appendChild(div);
+        const csvRows = [];
+        csvRows.push(HEADERS.join(','));
+        results.forEach(row => {
+            const vals = HEADERS.map(h => {
+                let val = row[h] || '';
+                if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                    val = '"' + val.replace(/"/g, '""') + '"';
+                }
+                return val;
             });
-        }
+            csvRows.push(vals.join(','));
+        });
 
-        function toggleAdvanced() {
-            const panel = document.getElementById('advancedPanel');
-            const toggle = document.querySelector('.advanced-toggle');
-            
-            if (panel.style.display === 'none') {
-                panel.style.display = 'block';
-                toggle.textContent = '▲ Advanced Search';
-            } else {
-                panel.style.display = 'none';
-                toggle.textContent = '▼ Advanced Search';
-            }
-        }
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute('download', `collection_search_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    });
 
-        function updateStatus(status, message) {
-            const indicator = document.getElementById('statusIndicator');
-            const messageEl = document.getElementById('statusMessage');
-            
-            indicator.className = 'status-indicator';
-            if (status === 'ready') indicator.classList.add('ready');
-            if (status === 'error') indicator.classList.add('error');
-            
-            messageEl.textContent = message;
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchBtn.click();
         }
+    });
 
-        function updateStats(quickIndex) {
-            const stats = document.getElementById('stats');
-            stats.innerHTML = `
-                <span class="stat">📊 ${quickIndex.totalRows.toLocaleString()} specimens</span>
-                <span class="stat">🏷️ ${quickIndex.fieldCounts?.genus || 0} genera</span>
-                <span class="stat">📍 ${quickIndex.fieldCounts?.location || 0} locations</span>
-            `;
-        }
-
-        async function performSearch() {
-            if (!db.indexes || db.isLoading) return;
-            
-            db.isLoading = true;
-            document.getElementById('searchBtn').disabled = true;
-            
-            try {
-                const globalTerm = document.getElementById('globalSearch').value.trim().toLowerCase();
-                const useRegex = document.getElementById('useRegex').checked;
-                
-                // Collect field searches
-                const fieldTerms = {};
-                db.indexes.headers.forEach(field => {
-                    const input = document.getElementById(`field_${field}`);
-                    if (input && input.value.trim()) {
-                        fieldTerms[field] = input.value.trim().toLowerCase();
-                    }
-                });
-                
-                // Find matching row indices
-                let matchingIndices = new Set();
-                
-                if (Object.keys(fieldTerms).length > 0) {
-                    // Field-specific search
-                    let firstField = true;
-                    for (const [field, term] of Object.entries(fieldTerms)) {
-                        const fieldMatches = searchField(field, term, useRegex);
-                        if (firstField) {
-                            matchingIndices = new Set(fieldMatches);
-                            firstField = false;
-                        } else {
-                            matchingIndices = new Set([...matchingIndices].filter(i => fieldMatches.includes(i)));
-                        }
-                    }
-                }
-                
-                if (globalTerm) {
-                    // Global search
-                    const globalMatches = searchFullText(globalTerm, useRegex);
-                    if (matchingIndices.size === 0) {
-                        matchingIndices = new Set(globalMatches);
-                    } else {
-                        matchingIndices = new Set([...matchingIndices].filter(i => globalMatches.includes(i)));
-                    }
-                }
-                
-                // If no search terms, show all
-                if (Object.keys(fieldTerms).length === 0 && !globalTerm) {
-                    matchingIndices = new Set(Array.from({ length: db.indexes.totalRows }, (_, i) => i));
-                }
-                
-                // Convert to array and sort
-                db.currentResults = Array.from(matchingIndices).sort((a, b) => a - b);
-                db.currentPage = 1;
-                db.totalPages = Math.ceil(db.currentResults.length / PAGE_SIZE);
-                
-                // Update UI
-                document.getElementById('resultsCount').textContent = 
-                    `${db.currentResults.length.toLocaleString()} results`;
-                
-                // Load first page
-                await loadPage(1);
-                
-            } catch (error) {
-                console.error('Search failed:', error);
-                showToast('Search failed: ' + error.message);
-            } finally {
-                db.isLoading = false;
-                document.getElementById('searchBtn').disabled = false;
-            }
-        }
-
-        function searchField(field, term, useRegex) {
-            if (!db.indexes.fieldIndexes[field]) return [];
-            
-            if (useRegex) {
-                try {
-                    const regex = new RegExp(term, 'i');
-                    const matches = [];
-                    db.indexes.fieldIndexes[field].forEach(([value, indices]) => {
-                        if (regex.test(value)) {
-                            matches.push(...indices);
-                        }
-                    });
-                    return matches;
-                } catch (e) {
-                    // Invalid regex, fall back to contains
-                    term = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    return searchField(field, term, false);
-                }
-            } else {
-                // Simple contains search
-                const matches = [];
-                db.indexes.fieldIndexes[field].forEach(([value, indices]) => {
-                    if (value.includes(term)) {
-                        matches.push(...indices);
-                    }
-                });
-                return matches;
-            }
-        }
-
-        function searchFullText(term, useRegex) {
-            if (useRegex) {
-                try {
-                    const regex = new RegExp(term, 'i');
-                    const matches = new Set();
-                    
-                    // For regex, we need to scan all data (slow but accurate)
-                    // This is a fallback - in practice, encourage field-specific regex
-                    showToast('Global regex search may be slow. Consider using field-specific search.', 3000);
-                    
-                    // Use trigram index for initial filtering
-                    const trigrams = generateTrigrams(term);
-                    let candidateRows = new Set();
-                    
-                    trigrams.forEach(trigram => {
-                        const matches = db.indexes.fullTextIndex[trigram];
-                        if (matches) {
-                            matches.forEach(i => candidateRows.add(i));
-                        }
-                    });
-                    
-                    // Then filter candidates with regex
-                    // This would require loading chunks - complex
-                    // For now, return candidates
-                    return Array.from(candidateRows);
-                    
-                } catch (e) {
-                    return [];
-                }
-            } else {
-                // Simple trigram search
-                const trigrams = generateTrigrams(term);
-                let matches = null;
-                
-                trigrams.forEach(trigram => {
-                    const trigramMatches = db.indexes.fullTextIndex[trigram];
-                    if (trigramMatches) {
-                        if (matches === null) {
-                            matches = new Set(trigramMatches);
-                        } else {
-                            matches = new Set([...matches].filter(i => trigramMatches.includes(i)));
-                        }
-                    }
-                });
-                
-                return matches ? Array.from(matches) : [];
-            }
-        }
-
-        function generateTrigrams(text) {
-            const trigrams = new Set();
-            const normalized = `__${text.toLowerCase()}__`;
-            for (let i = 0; i < normalized.length - 2; i++) {
-                trigrams.add(normalized.substr(i, 3));
-            }
-            return trigrams;
-        }
-
-        async function loadPage(page) {
-            const start = (page - 1) * PAGE_SIZE;
-            const end = Math.min(start + PAGE_SIZE, db.currentResults.length);
-            
-            if (start >= db.currentResults.length) return;
-            
-            // Get the row indices for this page
-            const rowIndices = db.currentResults.slice(start, end);
-            
-            // Load required chunks
-            const requiredChunks = new Set();
-            rowIndices.forEach(index => {
-                const chunkId = Math.floor(index / 1000);
-                requiredChunks.add(chunkId);
-            });
-            
-            // Load chunks if not already loaded
-            for (const chunkId of requiredChunks) {
-                if (!db.chunks[chunkId]) {
-                    await loadChunk(chunkId);
-                }
-            }
-            
-            // Get rows
-            const rows = rowIndices.map(index => {
-                const chunkId = Math.floor(index / 1000);
-                const chunkIndex = index % 1000;
-                return db.chunks[chunkId]?.[chunkIndex];
-            }).filter(r => r);
-            
-            // Render
-            renderResults(rows, page);
-        }
-
-        function renderResults(rows, page) {
-            const tbody = document.getElementById('tableBody');
-            const thead = document.getElementById('tableHeader');
-            
-            // Render header if needed
-            if (page === 1 || !thead.children.length) {
-                thead.innerHTML = '';
-                const headerRow = document.createElement('tr');
-                db.indexes.headers.forEach(header => {
-                    const th = document.createElement('th');
-                    th.textContent = header.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
-                    headerRow.appendChild(th);
-                });
-                thead.appendChild(headerRow);
-            }
-            
-            // Render rows
-            tbody.innerHTML = '';
-            rows.forEach(row => {
-                const tr = document.createElement('tr');
-                db.indexes.headers.forEach(header => {
-                    const td = document.createElement('td');
-                    td.textContent = row[header] || '';
-                    tr.appendChild(td);
-                });
-                tbody.appendChild(tr);
-            });
-            
-            // Update pagination
-            renderPagination();
-        }
-
-        function renderPagination() {
-            const container = document.getElementById('pagination');
-            container.innerHTML = '';
-            
-            if (db.totalPages <= 1) return;
-            
-            // Previous button
-            if (db.currentPage > 1) {
-                const btn = document.createElement('button');
-                btn.className = 'page-btn';
-                btn.textContent = '←';
-                btn.onclick = () => changePage(db.currentPage - 1);
-                container.appendChild(btn);
-            }
-            
-            // Page numbers
-            const startPage = Math.max(1, db.currentPage - 2);
-            const endPage = Math.min(db.totalPages, startPage + 4);
-            
-            for (let i = startPage; i <= endPage; i++) {
-                const btn = document.createElement('button');
-                btn.className = `page-btn ${i === db.currentPage ? 'active' : ''}`;
-                btn.textContent = i;
-                btn.onclick = () => changePage(i);
-                container.appendChild(btn);
-            }
-            
-            // Next button
-            if (db.currentPage < db.totalPages) {
-                const btn = document.createElement('button');
-                btn.className = 'page-btn';
-                btn.textContent = '→';
-                btn.onclick = () => changePage(db.currentPage + 1);
-                container.appendChild(btn);
-            }
-        }
-
-        async function changePage(page) {
-            db.currentPage = page;
-            await loadPage(page);
-            
-            // Scroll to top
-            document.getElementById('scrollContainer').scrollTop = 0;
-        }
-
-        function handleScroll() {
-            const container = document.getElementById('scrollContainer');
-            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 100) {
-                // Near bottom, load next page if available
-                if (db.currentPage < db.totalPages && !db.isLoading) {
-                    changePage(db.currentPage + 1);
-                }
-            }
-        }
-
-        async function downloadResults() {
-            if (!db.currentResults.length) return;
-            
-            showToast('Preparing download...');
-            
-            // Load all chunks containing results
-            const requiredChunks = new Set();
-            db.currentResults.forEach(index => {
-                requiredChunks.add(Math.floor(index / 1000));
-            });
-            
-            for (const chunkId of requiredChunks) {
-                if (!db.chunks[chunkId]) {
-                    await loadChunk(chunkId);
-                }
-            }
-            
-            // Get all rows
-            const rows = db.currentResults.map(index => {
-                const chunkId = Math.floor(index / 1000);
-                const chunkIndex = index % 1000;
-                return db.chunks[chunkId]?.[chunkIndex];
-            }).filter(r => r);
-            
-            // Convert to CSV
-            const csv = [
-                db.indexes.headers.join(','),
-                ...rows.map(row => db.indexes.headers.map(h => row[h] || '').join(','))
-            ].join('\n');
-            
-            // Download
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `collection_results_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            showToast('Download complete!');
-        }
-
-        function showToast(message, duration = 2000) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => toast.remove(), duration);
-        }
-
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', initialize);
-    </script>
+    loadAndIndexCsv();
+})();
+</script>
 </body>
 </html>
